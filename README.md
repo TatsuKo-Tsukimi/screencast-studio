@@ -1,34 +1,43 @@
 # screencast-studio
 
-Produce subtitled, cursor-overlay product demo videos from a Playwright-driven walkthrough.
+Subtitled, cursor-overlay demo videos from a Playwright walkthrough.
 
 ![overview stage](examples/sample-output/screenshots/01-overview.png)
 ![files tab](examples/sample-output/screenshots/02-files-tab.png)
 ![sort dropdown](examples/sample-output/screenshots/03-sort-dropdown.png)
 ![markdown preview](examples/sample-output/screenshots/04-markdown-preview.png)
 
-> Frames pulled from a real ~2-minute demo. The synthetic cursor (white arrow) and click ripples are ffmpeg overlays; subtitles are burned in. See [examples/sample-output/final.mp4](examples/sample-output/final.mp4) for the full video.
+> Frames from a real ~2-min demo. The white cursor and click ripples are ffmpeg overlays; subtitles are burned in. Full video: [examples/sample-output/final.mp4](examples/sample-output/final.mp4).
 
-
-The recording is cursorless (Playwright headless has no real mouse). The visual cursor + click ripples + subtitles you see in the final video are **ffmpeg overlays composed from a structured event log**, not real mouse events. This decoupling lets the recording script stay declarative ("click this, narrate that") while the production-quality visuals come for free from the post-processor.
+The cursor isn't real. Playwright headless has no mouse, so `record.js` just drives the page and logs every click and subtitle as it goes. `postprocess.js` reads that log and ffmpeg-overlays a cursor that glides to each target, drops a Material ripple on click, and burns in subtitles.
 
 Output:
 
-- `final.mp4` — h264 video with synthetic cursor lerp, Material click ripples, burned-in subtitles
-- `review/{flow,visual,coverage}/*.png` — 3-pass screenshot set for visual QA
+- `final.mp4` — h264, cursor overlay + click ripples + burned-in subtitles
+- `review/{flow,visual,coverage}/*.png` — 3-pass screenshot set for QA
 
-## 30-second tour
+## Quick start
 
-1. Tell Claude `用 screencast-studio 给我录个 demo`
-2. Claude scaffolds a project: `record.js / postprocess.js / review.js / login.js / gen-cursor.js / gen-ripple.js / deploy.js / clean.js / package.json`
-3. `npm install && npx playwright install chromium && npm run setup`
-4. `npm run login` — only if your target needs auth; skip for public pages
-5. Edit the stage flow in `record.js` (the only file you author, ~10-30 lines per stage)
-6. `npm run ship` — record + render + deploy + review + clean (~3-5 min for a 2-min demo; review phase has no progress indicator)
+Tell Claude:
 
-## What you write
+> 用 screencast-studio 给我录个 demo
 
-Inside the `try { ... }` block in `record.js`:
+It scaffolds `record.js`, `postprocess.js`, `review.js`, and the rest. Then:
+
+```bash
+npm install
+npx playwright install chromium
+npm run setup
+npm run login   # only if your target needs auth
+# edit the flow in record.js
+npm run ship
+```
+
+`ship` runs record → render → deploy → review → clean. ~3–5 min for a 2-min demo. The review phase has no progress indicator, so don't assume it hung.
+
+## Authoring
+
+The flow lives inside `record.js`:
 
 ```js
 await sub('从智能体广场进入项目模块');
@@ -39,32 +48,12 @@ await scroll(400, 2);
 await sub('滚动看更多');
 ```
 
-Five helpers cover ~95% of demo authoring: `sub` / `click` / `scroll` / `hold` / `tryStep`.
-
-## What you get
-
-- Smooth cursor that visibly approaches each click target before clicking
-- Material-style click ripples
-- CJK-capable burned-in subtitles, auto-timed by character count
-- 3-pass review screenshots so you (or Claude) can verify the demo *looks correct* — not just that the events fired
-
-## Cross-platform
-
-- **Windows / macOS** — works out of the box (CJK fonts built-in)
-- **Linux** — works after `apt install fonts-noto-cjk` (or distro equivalent)
+Five helpers — `sub` / `click` / `scroll` / `hold` / `tryStep` — cover ~95% of cases. Anonymized full example: [`examples/walkthrough-flow.md`](examples/walkthrough-flow.md).
 
 ## Prerequisites
 
-- Node 18+, network access
-- Auto-installed via npm: playwright, ffmpeg-static
-- One-time: `npx playwright install chromium`
+Node 18+. Playwright and ffmpeg-static install via npm; `npx playwright install chromium` once. CJK fonts ship with Windows and macOS; on Linux, `apt install fonts-noto-cjk` (or your distro's equivalent). Full list: [`references/prerequisites.md`](references/prerequisites.md).
 
-See `references/prerequisites.md` for full list.
+## Gotchas
 
-## Authoring example
-
-See `examples/walkthrough-flow.md` for an anonymized full-length demo (multi-tab UI walkthrough with file uploads).
-
-## Known pitfalls
-
-See `references/known-pitfalls.md`. The biggest one: **subtitle count ≠ recording correctness**. Always read the review screenshots after every ship.
+Subtitle count ≠ correctness. Subtitles fire on a timer; they keep going even if a click missed and the page never advanced. Always read the review screenshots after `ship`. More in [`references/known-pitfalls.md`](references/known-pitfalls.md).
