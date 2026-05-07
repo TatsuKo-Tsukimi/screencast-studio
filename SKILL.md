@@ -1,5 +1,5 @@
 ---
-name: screencast-demo
+name: screencast-studio
 description: Produce subtitled, cursor-overlay product demo videos from a Playwright-driven walkthrough. Output is a final.mp4 (synthetic cursor lerp + Material click ripples + burned-in subtitles) plus a 3-pass review screenshot set for visual QA. Activate when the user wants a polished web-app walkthrough video, OSS feature demo, bug repro screencast, or tutorial recording — anything where they need a "professional looking" demo video of a web UI.
 version: 0.1.0
 ---

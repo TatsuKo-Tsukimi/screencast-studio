@@ -1,5 +1,5 @@
 {
-  "name": "screencast-demo-project",
+  "name": "screencast-studio-project",
   "version": "0.1.0",
   "description": "Playwright-driven screencast demo with synthetic cursor + ripple + burned subtitles",
   "main": "record.js",

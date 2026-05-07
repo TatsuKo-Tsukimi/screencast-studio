@@ -1,4 +1,4 @@
-# screencast-demo
+# screencast-studio
 
 Produce subtitled, cursor-overlay product demo videos from a Playwright-driven walkthrough.
 
@@ -19,7 +19,7 @@ Output:
 
 ## 30-second tour
 
-1. Tell Claude `用 screencast-demo 给我录个 demo`
+1. Tell Claude `用 screencast-studio 给我录个 demo`
 2. Claude scaffolds a project: `record.js / postprocess.js / review.js / login.js / gen-cursor.js / gen-ripple.js / deploy.js / clean.js / package.json`
 3. `npm install && npx playwright install chromium && npm run setup`
 4. `npm run login` — only if your target needs auth; skip for public pages
