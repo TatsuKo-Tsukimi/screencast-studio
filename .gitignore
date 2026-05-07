@@ -1,0 +1,23 @@
+# Node.js
+node_modules/
+package-lock.json
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# Test scratch (when authoring new flows in templates/ for testing)
+templates/raw.webm
+templates/events.json
+templates/subs.srt
+templates/final.mp4
+templates/storageState.json
+templates/cursor.png
+templates/ripple.png
+templates/post-login.png
+templates/post-login-summary.json
+templates/videos/
+templates/review/
+templates/output/
