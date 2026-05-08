@@ -174,6 +174,4 @@ See [references/known-pitfalls.md](references/known-pitfalls.md). The big ones:
 
 ## Example
 
-- [examples/walkthrough-flow.md](examples/walkthrough-flow.md) — anonymized walkthrough of a real project demo (file manager + multi-tab UI), showing every stage pattern.
-- [examples/sample-output/final.mp4](examples/sample-output/final.mp4) — the actual ~2-minute video produced by that walkthrough, so you can see what the synthetic cursor + ripple + subtitles look like in motion.
-- [examples/sample-output/screenshots/](examples/sample-output/screenshots/) — 4 representative stills from the same video.
+- [examples/walkthrough-flow.md](examples/walkthrough-flow.md) — walkthrough of a real demo, showing every stage pattern.
