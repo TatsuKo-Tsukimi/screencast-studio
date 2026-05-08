@@ -8,7 +8,7 @@ version: 0.2.1
 
 Auto-record narrated demo videos of any web UI — so the user can **test, share, and iterate** on what they just vibe-coded.
 
-The primary use case: the user has just shipped a feature (often with AI help), and wants to verify it visually + show it to a teammate without manually screen-recording every time. The longer-term vision is iterating on a product like scrolling TikTok — watch a demo, prompt the AI to fix what looks off.
+The primary use case: the user has just shipped a feature (often with AI help), and wants to verify it visually + show it to a teammate without manually screen-recording every time. The longer-term vision is **building products by scrolling demos** — see a version, tell the AI what's off, swipe to the next take, stop when one matches what you wanted. Scrolling demos *is* the dev loop, not just a way to review the output.
 
 The technical trick: **a Playwright headless recording has no real cursor**. The visual cursor + click ripples + subtitles you see in the final video are **ffmpeg overlays composed from a structured events log**, not real mouse events. This decoupling lets the recording script stay declarative ("click this, narrate that") while the production-quality visuals (smooth cursor lerp, ripple flash, subtitle timing) come for free from the post-processor.
 

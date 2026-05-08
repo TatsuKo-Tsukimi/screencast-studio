@@ -1,6 +1,6 @@
 {
   "name": "screencast-studio-project",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Playwright-driven screencast demo with synthetic cursor + ripple + burned subtitles + persistent mask regions",
   "main": "record.js",
   "scripts": {

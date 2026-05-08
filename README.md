@@ -10,7 +10,7 @@ https://github.com/user-attachments/assets/5bacd549-4506-4174-b56f-77175e4646b8
 
 After you vibe-code a feature, how do you test what you actually built? How do you vibe-show it to a teammate? Manual screen recording is friction every time. This turns a declarative Playwright script (`sub` / `click` / `scroll`) into a polished demo video — narrated, cursor-tracked, mask-protected — so the cost of "make a demo" drops from minutes to one `npm run ship`.
 
-The bigger vision: scroll demo videos like TikTok, prompt the AI to fix anything that looks off. **Vibe coding × vibe testing × vibe iteration.**
+The bigger vision: **build products by scrolling demos.** You see a version, tell the AI what's off, swipe to the next take, stop when one matches what you wanted — scrolling demos *is* the dev loop, not just a way to review one. Vibe coding × vibe testing × vibe iteration.
 
 ## How it works
 
