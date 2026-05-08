@@ -1,24 +1,27 @@
 ---
 name: screencast-studio
-description: Produce subtitled, cursor-overlay product demo videos from a Playwright-driven walkthrough. Output is a final.mp4 (synthetic cursor lerp + Material click ripples + burned-in subtitles + optional persistent mask regions for sensitive UI) plus a 4-pass review screenshot set for visual + privacy QA. Activate when the user wants a polished web-app walkthrough video, OSS feature demo, bug repro screencast, or tutorial recording — anything where they need a "professional looking" demo video of a web UI.
-version: 0.2.0
+description: Auto-record narrated demo videos of any web UI from a Playwright-driven walkthrough — primary use case is the vibe-coding test loop (you just shipped a feature with AI help and need to verify it / vibe-show it / iterate on it without manual screen recording). Output is a final.mp4 (synthetic cursor lerp + Material click ripples + burned-in subtitles + optional persistent mask regions for sensitive UI) plus a 4-pass review screenshot set for visual + privacy QA. Activate when the user wants to test or share something they just vibe-coded, or asks for a polished walkthrough / OSS feature demo / bug repro screencast / tutorial recording.
+version: 0.2.1
 ---
 
-# Screencast Demo
+# Screencast Studio
 
-Produce **subtitled, cursor-overlay product demo videos** from a Playwright-driven walkthrough.
+Auto-record narrated demo videos of any web UI — so the user can **test, share, and iterate** on what they just vibe-coded.
 
-The central insight: **a Playwright headless recording has no real cursor**. The visual cursor + click ripples + subtitles you see in the final video are **ffmpeg overlays composed from a structured events log**, not real mouse events. This decoupling lets the recording script stay declarative ("click this, narrate that") while the production-quality visuals (smooth cursor lerp, ripple flash, subtitle timing) come for free from the post-processor.
+The primary use case: the user has just shipped a feature (often with AI help), and wants to verify it visually + show it to a teammate without manually screen-recording every time. The longer-term vision is iterating on a product like scrolling TikTok — watch a demo, prompt the AI to fix what looks off.
+
+The technical trick: **a Playwright headless recording has no real cursor**. The visual cursor + click ripples + subtitles you see in the final video are **ffmpeg overlays composed from a structured events log**, not real mouse events. This decoupling lets the recording script stay declarative ("click this, narrate that") while the production-quality visuals (smooth cursor lerp, ripple flash, subtitle timing) come for free from the post-processor.
 
 ## When to use
 
 Activate when the user asks for any of:
 
+- **Vibe coding test loop** — they just shipped a feature with AI help and want to verify it visually or share it with a teammate (this is the *primary* trigger)
 - A polished **product walkthrough video** of a web app
 - An **OSS feature demo** for a README or release announcement
 - A **bug repro screencast** with narrated steps
 - A **tutorial / onboarding video** showing how to do something in a browser-based UI
-- Anything where the user said "录 demo / 录视频 / screencast / walkthrough video / 演示视频"
+- Anything where the user said "vibe show / vibe demo / 测一下我刚做的 / 给同事看看 / 录 demo / 录视频 / screencast / walkthrough video / 演示视频"
 
 Don't activate when:
 

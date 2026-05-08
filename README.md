@@ -1,10 +1,18 @@
 # screencast-studio
 
-Subtitled, cursor-overlay demo videos from a Playwright walkthrough.
+Auto-record narrated demo videos of any web UI — so you can test, share, and (eventually) iterate on what you vibe-coded.
 
 https://github.com/user-attachments/assets/5bacd549-4506-4174-b56f-77175e4646b8
 
 > ~2-min demo. White cursor + click ripples + subtitles are ffmpeg overlays. The blurred patches in the sidebar are persistent masks (v0.2.0 feature), declared once in CONFIG and applied as the top composition layer.
+
+## Why this exists
+
+After you vibe-code a feature, how do you test what you actually built? How do you vibe-show it to a teammate? Manual screen recording is friction every time. This turns a declarative Playwright script (`sub` / `click` / `scroll`) into a polished demo video — narrated, cursor-tracked, mask-protected — so the cost of "make a demo" drops from minutes to one `npm run ship`.
+
+The bigger vision: scroll demo videos like TikTok, prompt the AI to fix anything that looks off. **Vibe coding × vibe testing × vibe iteration.**
+
+## How it works
 
 The cursor isn't real. Playwright headless has no mouse, so `record.js` just drives the page and logs every click and subtitle as it goes. `postprocess.js` reads that log and ffmpeg-overlays a cursor that glides to each target, drops a Material ripple on click, and burns in subtitles. Sensitive UI regions can be declared in CONFIG and they're blurred automatically as the top composition layer.
 
