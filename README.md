@@ -2,9 +2,9 @@
 
 Subtitled, cursor-overlay demo videos from a Playwright walkthrough.
 
-<video src="https://github.com/TatsuKo-Tsukimi/screencast-studio/raw/master/examples/sample-output/final.mp4" controls width="720"></video>
+https://github.com/user-attachments/assets/000481e7-f4b9-4b79-8175-68893c4572b8
 
-> ~2-min demo. White cursor + click ripples are ffmpeg overlays; subtitles are burned in. [Open the mp4 directly](examples/sample-output/final.mp4) if the inline player doesn't render.
+> ~2-min demo. White cursor + click ripples are ffmpeg overlays; subtitles are burned in.
 
 The cursor isn't real. Playwright headless has no mouse, so `record.js` just drives the page and logs every click and subtitle as it goes. `postprocess.js` reads that log and ffmpeg-overlays a cursor that glides to each target, drops a Material ripple on click, and burns in subtitles.
 
