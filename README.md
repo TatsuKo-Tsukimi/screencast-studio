@@ -2,6 +2,10 @@
 
 Subtitled, cursor-overlay demo videos from a Playwright walkthrough.
 
+https://github.com/user-attachments/assets/5bacd549-4506-4174-b56f-77175e4646b8
+
+> ~2-min demo. White cursor + click ripples + subtitles are ffmpeg overlays. The blurred patches in the sidebar are persistent masks (v0.2.0 feature), declared once in CONFIG and applied as the top composition layer.
+
 The cursor isn't real. Playwright headless has no mouse, so `record.js` just drives the page and logs every click and subtitle as it goes. `postprocess.js` reads that log and ffmpeg-overlays a cursor that glides to each target, drops a Material ripple on click, and burns in subtitles. Sensitive UI regions can be declared in CONFIG and they're blurred automatically as the top composition layer.
 
 Output:
