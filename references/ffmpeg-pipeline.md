@@ -96,7 +96,7 @@ Each `mask_persistent` event becomes 3 filter steps:
 
 ```
 [in]  split=2  [main][crop_input]
-[crop_input]  crop=W:H:X:Y, boxblur=20:2  [blurred]
+[crop_input]  crop=W:H:X:Y, boxblur=lr=20:lp=2:cr=15:cp=2  [blurred]
 [main][blurred]  overlay=x=X:y=Y  [out_i]
 ```
 
@@ -104,13 +104,15 @@ Each `mask_persistent` event becomes 3 filter steps:
 
 Layered mask order: masks earlier in `PERSISTENT_MASKS` are applied first, so later entries paint over earlier ones if regions overlap. In practice, mask regions don't overlap, so order doesn't matter.
 
-`boxblur=20:2` settings:
-- `20` = radius (higher = blurrier; subjective sweet spot is 15-30)
-- `2` = iterations (more iterations smooth out the box pattern; 2 is enough for general use)
+`boxblur=lr=20:lp=2:cr=15:cp=2` settings:
+- `lr=20` = luma radius (higher = blurrier; subjective sweet spot is 15-30)
+- `lp=2` = luma power / iterations (more iterations smooth out the box pattern; 2 is enough)
+- `cr=15` = chroma radius (ffmpeg caps this at 15 — that's why we set lr/cr separately rather than `boxblur=20:2`)
+- `cp=2` = chroma power, matching luma for consistency
 
-For tighter blur (when small text is still readable): try `boxblur=40:3` or replace with `gblur=sigma=15` (proper Gaussian; somewhat slower).
+For tighter blur (when small text is still readable): try `lr=40:lp=3:cr=15:cp=3` or replace with `gblur=sigma=15` (proper Gaussian; somewhat slower).
 
-For "mosaic block" effect instead of smooth blur, replace `boxblur=20:2` with `pixelize=20:20` (where 20 is the block size). Less convex visually but unmistakable as deliberate.
+For "mosaic block" effect instead of smooth blur, replace the `boxblur=...` with `pixelize=20:20` (where 20 is the block size). Less convex visually but unmistakable as deliberate.
 
 The mask layer is inserted AFTER `subtitles=`, so the masked area is unconditionally unreadable regardless of cursor / ripple / subtitle activity beneath.
 

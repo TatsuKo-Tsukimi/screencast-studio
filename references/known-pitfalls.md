@@ -148,13 +148,14 @@ If you find issues, fix `record.js` (or just add box masks for the sensitive pas
 
 **Symptom**: in `review/sensitive/mask-XX-*.png`, you can squint and read the text inside the blurred region (especially for large/bold/high-contrast text).
 
-**Cause**: the default `boxblur=20:2` is tuned for typical SPA chrome (badges, footers, small text). High-contrast / large-font content benefits from more aggressive blur.
+**Cause**: the default `boxblur=lr=20:lp=2:cr=15:cp=2` is tuned for typical SPA chrome (badges, footers, small text). High-contrast / large-font content benefits from more aggressive blur.
 
-**Fix**: edit `postprocess.js`, find `boxblur=20:2` in the persistent-mask block, and try one of:
-- `boxblur=40:2` — wider blur kernel (more smearing horizontally + vertically)
-- `boxblur=20:4` — more iterations (smoother gaussian-like falloff)
-- `boxblur=40:3` — both, for stubbornly readable text
+**Fix**: edit `postprocess.js`, find the `boxblur=...` in the persistent-mask block, and try one of:
+- `boxblur=lr=40:lp=2:cr=15:cp=2` — wider luma kernel (more smearing horizontally + vertically). Chroma stays capped at 15 (ffmpeg constraint).
+- `boxblur=lr=20:lp=4:cr=15:cp=4` — more iterations (smoother gaussian-like falloff)
+- `boxblur=lr=60:lp=3:cr=15:cp=3` — both, for stubbornly readable text
 - Replace with `pixelize=20:20` for unmistakable mosaic blocks (block size 20×20)
+- `gblur=sigma=15` — proper Gaussian, no chroma cap, slightly slower
 
 Re-render with `npm run render`, re-check `review/sensitive/`. No re-record needed.
 

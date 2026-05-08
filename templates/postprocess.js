@@ -205,7 +205,8 @@ function main() {
     const blurTag = `[m${i}blur]`;
     const ovTag = `[m${i}out]`;
     chains.push(`${inLabel}split=2${mainTag}${cropTag}`);
-    chains.push(`${cropTag}crop=${m.w}:${m.h}:${m.x}:${m.y},boxblur=20:2${blurTag}`);
+    // boxblur split: luma (lr/lp) can go higher than chroma (cr capped at 15 by ffmpeg).
+    chains.push(`${cropTag}crop=${m.w}:${m.h}:${m.x}:${m.y},boxblur=lr=20:lp=2:cr=15:cp=2${blurTag}`);
     chains.push(`${mainTag}${blurTag}overlay=x=${m.x}:y=${m.y}${ovTag}`);
     inLabel = ovTag;
   });

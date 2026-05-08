@@ -140,9 +140,9 @@ Resolved automatically by `record.js` immediately after first navigation — bef
 
 ### Tuning the blur
 
-`postprocess.js` uses `boxblur=20:2`. The first number is radius (higher = blurrier), second is iterations (higher = smoother but exponentially slower). Tweak in `postprocess.js` filter chain if:
-- Text inside the masked region is still readable → increase radius (try `40:2` or `60:3`)
-- Mask looks "pixelated" instead of smooth → increase iterations (`20:3` or `20:4`)
+`postprocess.js` uses `boxblur=lr=20:lp=2:cr=15:cp=2`. The `lr` / `lp` are luma radius / iterations; `cr` / `cp` are chroma radius / iterations. Chroma is split out because ffmpeg caps chroma radius at 15 — `boxblur=20:2` (which would set both to 20) would error. Tweak in `postprocess.js` filter chain if:
+- Text inside the masked region is still readable → increase luma radius (try `lr=40:lp=2:cr=15:cp=2` or `lr=60:lp=3:cr=15:cp=3`)
+- Mask looks "pixelated" instead of smooth → increase iterations (`lr=20:lp=3:cr=15:cp=3` or `lp=4:cp=4`)
 
 ## Escape hatches
 

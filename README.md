@@ -55,7 +55,7 @@ const PERSISTENT_MASKS = [
 ];
 ```
 
-`selector` masks resolve once after first navigation (best for `position: fixed`/`sticky` elements); `box` masks are fixed coordinates (use these for retroactive coverage — edit + `npm run render` without re-recording). Default blur is `boxblur=20:2`; tune in `postprocess.js` if text is still legible. After every ship, **read `review/sensitive/`** — it crops each mask region for blur verification and samples full frames every 10s for unmasked-PII detection.
+`selector` masks resolve once after first navigation (best for `position: fixed`/`sticky` elements); `box` masks are fixed coordinates (use these for retroactive coverage — edit + `npm run render` without re-recording). Default blur is `boxblur=lr=20:lp=2:cr=15:cp=2` (chroma capped per ffmpeg); tune in `postprocess.js` if text is still legible. After every ship, **read `review/sensitive/`** — it crops each mask region for blur verification and samples full frames every 10s for unmasked-PII detection.
 
 ## Prerequisites
 
