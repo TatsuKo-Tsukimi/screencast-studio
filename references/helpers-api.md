@@ -7,7 +7,7 @@ The five helpers exposed inside the `try { ... }` block of `record.js`. All are 
 Adds a subtitle event to the events log and holds the page for a duration scaled by character count.
 
 ```js
-await sub('概览底部 — BRIEF 注入内容 / 最近活动 / 定时任务');
+await sub('Bottom of overview — recent activity, scheduled tasks');
 ```
 
 **Hold time formula**:
@@ -94,11 +94,11 @@ Use to:
 Wraps a sub-flow in try/catch + logs. If `fn` throws, the error is caught and logged as `✗ ${name} — skipped: <message>`, then execution continues.
 
 ```js
-await tryStep('Open project BRIEF panel', async () => {
-  const openBrief = page.locator('button').filter({ hasText: /Open BRIEF/i }).first();
-  await openBrief.waitFor({ state: 'visible', timeout: 4000 });
-  await click(openBrief, '点击「Open BRIEF」');
-  await sub('Project brief — auto-injected into agent chats');
+await tryStep('Open detail panel', async () => {
+  const openBtn = page.locator('button').filter({ hasText: /Open Details/i }).first();
+  await openBtn.waitFor({ state: 'visible', timeout: 4000 });
+  await click(openBtn, 'Click "Open Details"');
+  await sub('Detail panel — structured fields and sections');
   await hold(1500);
   // ... close + cleanup
 });
@@ -113,6 +113,36 @@ await tryStep('Open project BRIEF panel', async () => {
 - Required stages — if they fail, you want the recording to abort so you don't ship a broken demo
 - Login / setup
 - The first navigation (if it fails, nothing else will work)
+
+## Persistent masks (CONFIG, not a helper)
+
+Configured in `record.js` top-level CONFIG block, NOT inside the stage flow:
+
+```js
+const PERSISTENT_MASKS = [
+  { selector: '.user-badge',  label: 'username' },
+  { selector: 'header .logo', label: 'logo' },
+  { box: { x: 0, y: 820, w: 220, h: 80 }, label: 'sidebar-bottom' },
+];
+```
+
+Resolved automatically by `record.js` immediately after first navigation — before your STAGE FLOW runs. Each mask becomes a `mask_persistent` event in `events.json`; `postprocess.js` then crops + boxblurs the region and overlays it back at the original coordinates as the final composition layer (above subtitles + cursor + ripples).
+
+### When to use selector vs box
+
+**Selector** (`{ selector: '...', label: '...' }`):
+- Use when the element is `position: fixed` or `position: sticky` — boundingBox stays consistent through the entire video
+- record.js queries `getComputedStyle(el).position` after resolving; warns in the log if not fixed/sticky
+
+**Box** (`{ box: {x, y, w, h}, label: '...' }`):
+- Use when selector is unreliable, or you've measured coordinates from a `review/sensitive/scan-XX.png` after ship and need to retroactively cover a region
+- `box` masks don't require re-recording — edit `PERSISTENT_MASKS`, run `npm run render && npm run review:sensitive`. The original `events.json` is kept and re-used.
+
+### Tuning the blur
+
+`postprocess.js` uses `boxblur=20:2`. The first number is radius (higher = blurrier), second is iterations (higher = smoother but exponentially slower). Tweak in `postprocess.js` filter chain if:
+- Text inside the masked region is still readable → increase radius (try `40:2` or `60:3`)
+- Mask looks "pixelated" instead of smooth → increase iterations (`20:3` or `20:4`)
 
 ## Escape hatches
 
@@ -139,14 +169,15 @@ When you use `page.something()` directly, **no events are recorded** — the syn
 
 ## What lives in `events.json`
 
-Every helper that affects video output pushes events:
+Every helper / config that affects video output pushes events:
 
-| Helper | Pushes |
+| Source | Pushes |
 |---|---|
 | `sub(label)` | `{ t, kind: "subtitle", label }` |
 | `click(...)` | `{ t, kind: "move", x, y }` then `{ t, kind: "click", x, y, label }` |
 | `scroll(...)` | (no events — just causes UI to scroll) |
 | `hold(...)` | (no events — pure timing) |
 | `tryStep(...)` | (no events — wraps fn) |
+| `PERSISTENT_MASKS` (CONFIG) | one `{ t: 0, kind: "mask_persistent", x, y, w, h, label }` per resolved entry |
 
 See [events-schema.md](events-schema.md) for the full schema and how postprocess consumes it.

@@ -18,6 +18,7 @@ Layers (bottom to top in the composition):
 3. **Ghost cursor trail** (2 trailing copies of cursor.png, lower alpha)
 4. **Main cursor** (full alpha cursor.png)
 5. **Burned subtitles** (libass via `subtitles=` filter)
+6. **Persistent masks** (split → crop+boxblur → overlay; one per mask region; ALWAYS top layer so masks cover cursor and subtitles within the masked area)
 
 ## Cursor lerp model
 
@@ -88,6 +89,30 @@ To recalibrate: do a manual recording with a known landmark event (e.g. a click 
 The ripple section uses ffmpeg `split` to make N copies of each ripple frame stream (one per click). This is because ffmpeg filter pads are single-use — overlay-ing the same input N times in different time windows would error. The `split=N[rf0_0][rf0_1]...[rf0_N-1]` trick gives each click its own fresh copy.
 
 Side effect: the filter graph length scales linearly with click count × ripple frames. A 100-click recording with 2 ripple frames produces a 200-overlay chain, which ffmpeg handles fine but is slow to parse on startup (~2s overhead).
+
+## Persistent mask filter chain
+
+Each `mask_persistent` event becomes 3 filter steps:
+
+```
+[in]  split=2  [main][crop_input]
+[crop_input]  crop=W:H:X:Y, boxblur=20:2  [blurred]
+[main][blurred]  overlay=x=X:y=Y  [out_i]
+```
+
+`split=2` is required because ffmpeg filter pads are single-use — you can't both keep the original stream as the base AND consume it for the cropped region in one chain.
+
+Layered mask order: masks earlier in `PERSISTENT_MASKS` are applied first, so later entries paint over earlier ones if regions overlap. In practice, mask regions don't overlap, so order doesn't matter.
+
+`boxblur=20:2` settings:
+- `20` = radius (higher = blurrier; subjective sweet spot is 15-30)
+- `2` = iterations (more iterations smooth out the box pattern; 2 is enough for general use)
+
+For tighter blur (when small text is still readable): try `boxblur=40:3` or replace with `gblur=sigma=15` (proper Gaussian; somewhat slower).
+
+For "mosaic block" effect instead of smooth blur, replace `boxblur=20:2` with `pixelize=20:20` (where 20 is the block size). Less convex visually but unmistakable as deliberate.
+
+The mask layer is inserted AFTER `subtitles=`, so the masked area is unconditionally unreadable regardless of cursor / ripple / subtitle activity beneath.
 
 ## Output codec
 

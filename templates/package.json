@@ -1,7 +1,7 @@
 {
   "name": "screencast-studio-project",
-  "version": "0.1.0",
-  "description": "Playwright-driven screencast demo with synthetic cursor + ripple + burned subtitles",
+  "version": "0.2.0",
+  "description": "Playwright-driven screencast demo with synthetic cursor + ripple + burned subtitles + persistent mask regions",
   "main": "record.js",
   "scripts": {
     "setup": "node gen-cursor.js && node gen-ripple.js",
@@ -14,6 +14,7 @@
     "review:flow": "node review.js flow",
     "review:visual": "node review.js visual",
     "review:coverage": "node review.js coverage",
+    "review:sensitive": "node review.js sensitive",
     "ship": "node record.js && node postprocess.js && node deploy.js && node review.js && node clean.js",
     "clean": "node clean.js"
   },

@@ -1,16 +1,16 @@
 # Walkthrough flow example
 
-Anonymized version of a real ~2-minute product demo: a multi-agent collaboration platform's "project workspace" feature. The demo browses overview / brief / files / tasks / chats / settings tabs of a mature project, then demonstrates additive capabilities (new folder + upload).
+Pattern catalog for a generic ~2-minute SPA demo: a multi-tab project / workspace style web app. The flow visits an overview / detail panel / files / tasks / chats / settings layout of an existing record, then demonstrates additive capabilities (new folder + upload).
 
 This shows every common stage pattern: tab switching, modal open/close, scrollable list traversal, optional UI surfaces with `tryStep`, file upload with chooser, isolated sandbox folder for additive demos.
 
 ## High-level flow
 
 ```
-Stage 0  : Plaza (landing page)
-Stage 1  : → projects index
-Stage 2  : → mature project detail
-Stage 3  : Open BRIEF panel (modal)
+Stage 0  : Landing page
+Stage 1  : → projects/items index
+Stage 2  : → detail view of a populated record
+Stage 3  : Open detail panel (modal)
 Stage 4  : Files tab + scroll listing
 Stage 4.5: Enter archive/ subfolder → return via ".."
 Stage 5  : Sort dropdown (optional)
@@ -32,13 +32,13 @@ Each stage is one `await sub('...')` plus the actions that should be visible dur
 
 ```js
 // ===== Stage 1: → /projects =====
-await sub('从智能体广场进入项目模块');
+await sub('Open the projects view');
 const navProj = page.locator('a[href="/projects"]').first();
-await click(navProj, '点击侧边栏「项目」');
+await click(navProj, 'Click "Projects" in sidebar');
 await page.waitForURL(/\/projects$/);
-await page.locator('h1:has-text("项目")').first().waitFor();
+await page.locator('h1').first().waitFor();
 await hold();
-await sub('多个并行项目 — 出海发布主题');
+await sub('Multiple projects in flight');
 ```
 
 Notes:
@@ -49,46 +49,46 @@ Notes:
 ## Pattern: modal open + close
 
 ```js
-// ===== Stage 3: Open BRIEF panel =====
-await tryStep('Open BRIEF panel', async () => {
-  const openBrief = page.locator('button, a').filter({ hasText: /Open BRIEF/i }).first();
-  await openBrief.waitFor({ state: 'visible', timeout: 4000 });
-  await click(openBrief, '点击「Open BRIEF」');
-  await page.locator('text=项目简报').first().waitFor({ state: 'visible', timeout: 4000 });
-  await sub('项目简报 — 结构化模板，注入到每个 agent chat');
+// ===== Stage 3: Open detail panel =====
+await tryStep('Open detail panel', async () => {
+  const openBtn = page.locator('button, a').filter({ hasText: /Open Details/i }).first();
+  await openBtn.waitFor({ state: 'visible', timeout: 4000 });
+  await click(openBtn, 'Click "Open Details"');
+  await page.locator('text=Details').first().waitFor({ state: 'visible', timeout: 4000 });
+  await sub('Detail panel — structured fields');
   await hold(1500);
   await scroll(300, 2);
-  await sub('支持目标 / 背景 / 限制 / 自定义章节 / 高级模式');
+  await sub('Multiple sections + an advanced mode');
   await hold(1500);
   await scroll(-600, 1);
   await hold(400);
-  const closeBtn = page.locator('button').filter({ hasText: /^\s*关闭\s*$/ }).first();
-  await click(closeBtn, '点击「关闭」');
-  await page.locator('text=项目简报').waitFor({ state: 'hidden', timeout: 3000 }).catch(() => {});
+  const closeBtn = page.locator('button').filter({ hasText: /^\s*Close\s*$/ }).first();
+  await click(closeBtn, 'Click "Close"');
+  await page.locator('text=Details').waitFor({ state: 'hidden', timeout: 3000 }).catch(() => {});
   await hold(400);
 });
 ```
 
 Notes:
-- Wrapped in `tryStep` because BRIEF panel might not exist on every project.
+- Wrapped in `tryStep` because the detail panel might not exist on every record.
 - After clicking open, wait for the modal's distinctive content to appear before narrating.
 - Scroll inside the modal to reveal more content + a second narration.
 - Scroll back before closing (UX: leaving the modal scrolled looks weird).
-- Close button selector uses regex `^\s*关闭\s*$` — exact-match-with-whitespace, so it doesn't match other buttons containing "关闭".
+- Close button selector uses regex `^\s*Close\s*$` — exact-match-with-whitespace, so it doesn't match other buttons containing "Close" as a substring.
 
 ## Pattern: scrollable list traversal
 
 ```js
 // ===== Stage 4: Files tab =====
-const filesTab = page.locator(':is(button, a, [role="tab"])').filter({ hasText: /^\s*文件\s*$/ }).first();
-await click(filesTab, '切到「文件」tab');
+const filesTab = page.locator(':is(button, a, [role="tab"])').filter({ hasText: /^\s*Files\s*$/ }).first();
+await click(filesTab, 'Switch to Files tab');
 const uploadBtn = page.locator('button').filter({ hasText: /Upload/i }).first();
 await uploadBtn.waitFor({ state: 'visible' });
 await hold();
-await sub('文件 tab — 含 markdown / 图片 / 子文件夹');
+await sub('Files tab — markdown / images / subfolders');
 await hold(1500);
 await scroll(350, 2);
-await sub('16 个真实文件 — 含 .png / .md / .txt 多类型');
+await sub('Mixed file types: .png / .md / .txt');
 await hold(1500);
 await scroll(-700, 1);
 await hold(400);
@@ -106,15 +106,15 @@ Notes:
 await tryStep('Enter archive subfolder', async () => {
   const archive = page.locator('text=archive/').first();
   await archive.waitFor({ state: 'visible', timeout: 4000 });
-  await click(archive, '进入 archive/ 子文件夹');
+  await click(archive, 'Enter archive/ subfolder');
   await hold(1500);
-  await sub('子文件夹 archive/ — 路径感知能力');
+  await sub('archive/ subfolder — breadcrumb navigation');
   await hold(1500);
   // Return to root by clicking ".." parent entry. Use exact match — `text=..`
   // is substring and matches anything 2+ chars long.
   const upRow = page.getByText('..', { exact: true }).first();
   await upRow.waitFor({ state: 'visible', timeout: 4000 });
-  await click(upRow, '返回上一层 (..)');
+  await click(upRow, 'Go up (..)');
   await page.locator('text=archive/').first().waitFor({ state: 'visible', timeout: 4000 });
   await hold(600);
 });
@@ -132,24 +132,24 @@ await tryStep('Upload test files into folder', async () => {
   const folderUploadBtn = page.locator('button').filter({ hasText: /Upload/i }).first();
   await folderUploadBtn.waitFor({ state: 'visible' });
   const fcp = page.waitForEvent('filechooser');
-  await click(folderUploadBtn, '点击「⬆ Upload」');
+  await click(folderUploadBtn, 'Click "Upload"');
   const fc = await fcp;
   await fc.setFiles([
     `${TEST_FILES_DIR}/test.md`,
     `${TEST_FILES_DIR}/test.png`,
     `${TEST_FILES_DIR}/test.pdf`,
   ]);
-  // Handle conflict dialog if present (defensive)
+  // Handle conflict dialog if present (defensive — adapt the matcher to your app's wording)
   for (let i = 0; i < 4; i++) {
     await page.waitForTimeout(500);
-    const conflict = await page.locator('text=已经在这个项目里').count();
+    const conflict = await page.locator('text=already exists').count();
     if (conflict === 0) break;
-    const replaceBtn = page.locator('button').filter({ hasText: /^\s*替换\s*$/ }).first();
+    const replaceBtn = page.locator('button').filter({ hasText: /^\s*Replace\s*$/ }).first();
     await replaceBtn.click().catch(() => {});
   }
   await page.locator('text=/^test\\.pdf$/').first().waitFor({ timeout: 20000 });
   await hold(800);
-  await sub('上传 test.md / test.png / test.pdf — 隔离在演示文件夹内');
+  await sub('Uploaded test.md / test.png / test.pdf — isolated in demo folder');
   await hold(1200);
 });
 ```
@@ -164,21 +164,21 @@ Notes:
 The closing third of the demo creates a timestamped subfolder, enters it, uploads test files there. Two reasons:
 
 1. The demo is run repeatedly during development — uploading to root would accumulate test files across runs.
-2. Subfolder name is timestamped (`演示_${HHMM}`) so concurrent demo runs don't collide.
+2. Subfolder name is timestamped (`demo_${HHMM}`) so concurrent demo runs don't collide.
 
 ```js
 const STAMP = new Date().toISOString().slice(11, 16).replace(':', '');
-const DEMO_FOLDER = `演示_${STAMP}`;
+const DEMO_FOLDER = `demo_${STAMP}`;
 
 await tryStep('Create + enter demo folder', async () => {
-  const newFolderBtn = page.locator('button').filter({ hasText: /新建文件夹/ }).first();
-  await click(newFolderBtn, '点击「📁 新建文件夹」');
-  const folderInput = page.locator('input[placeholder="文件夹名称"]');
+  const newFolderBtn = page.locator('button').filter({ hasText: /New folder/i }).first();
+  await click(newFolderBtn, 'Click "New folder"');
+  const folderInput = page.locator('input[placeholder*="folder name" i]');
   await folderInput.waitFor({ state: 'visible' });
   await folderInput.fill(DEMO_FOLDER);
-  await sub(`新建独立子文件夹: ${DEMO_FOLDER}`);
+  await sub(`Create isolated subfolder: ${DEMO_FOLDER}`);
   const folderConfirm = page.locator('button').filter({ hasText: /^\s*OK\s*$/ }).first();
-  await click(folderConfirm, '提交「OK」');
+  await click(folderConfirm, 'Confirm OK');
   // ... enter the folder
 });
 ```

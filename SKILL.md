@@ -1,7 +1,7 @@
 ---
 name: screencast-studio
-description: Produce subtitled, cursor-overlay product demo videos from a Playwright-driven walkthrough. Output is a final.mp4 (synthetic cursor lerp + Material click ripples + burned-in subtitles) plus a 3-pass review screenshot set for visual QA. Activate when the user wants a polished web-app walkthrough video, OSS feature demo, bug repro screencast, or tutorial recording — anything where they need a "professional looking" demo video of a web UI.
-version: 0.1.0
+description: Produce subtitled, cursor-overlay product demo videos from a Playwright-driven walkthrough. Output is a final.mp4 (synthetic cursor lerp + Material click ripples + burned-in subtitles + optional persistent mask regions for sensitive UI) plus a 4-pass review screenshot set for visual + privacy QA. Activate when the user wants a polished web-app walkthrough video, OSS feature demo, bug repro screencast, or tutorial recording — anything where they need a "professional looking" demo video of a web UI.
+version: 0.2.0
 ---
 
 # Screencast Demo
@@ -30,12 +30,12 @@ Don't activate when:
 ## Pipeline overview
 
 ```
-gen-cursor + gen-ripple  →  cursor.png, ripple.png        (one-time)
+gen-cursor + gen-ripple  →  cursor.png, ripple.png                    (one-time)
 login                    →  storageState.json + page summary
-record                   →  raw.webm + events.json
-postprocess              →  final.mp4 + subs.srt
+record                   →  raw.webm + events.json (incl. mask events)
+postprocess              →  final.mp4 + subs.srt   (mask blur applied)
 deploy                   →  output/screencast-{stamp}.mp4
-review                   →  review/{flow,visual,coverage}/*.png
+review                   →  review/{flow,visual,coverage,sensitive}/*.png
 clean                    →  drop scratch files
 ```
 
@@ -102,11 +102,44 @@ npm run login      # opens a real browser; user logs in manually
 
 After `npm run login` (when used), `post-login-summary.json` will contain visible nav / heading / button text. **Read this file before authoring the stage flow** — it tells you what selectors are available without poking the live UI.
 
-### 5. Author the stage flow
+### 5. Configure persistent masks (REQUIRED — privacy gate)
 
-Edit the body of the `try { ... }` block in `record.js` (search for `STAGE FLOW`). Use the helpers documented in [references/helpers-api.md](references/helpers-api.md). For a fuller pattern guide see [examples/walkthrough-flow.md](examples/walkthrough-flow.md).
+**Before authoring the stage flow, you MUST ask the user about sensitive UI regions to mask.** This is a hard requirement, not an optional polish step. If the demo will be shared (OSS / X / public README), unmasked PII in the recording is hard to retract — git history rewrites + CDN takedown tickets are painful.
 
-### 6. Ship
+Read `post-login-summary.json` and `post-login.png` for context, then ask the user something like:
+
+> Before I start the recording, I want to mask sensitive UI regions. Looking at this app, here's what I notice that often needs masking — please confirm or correct:
+>
+> - Top-left logo / brand (if internal product)
+> - Sidebar user badge / username / avatar (bottom-left in many SPAs)
+> - Footer version number (e.g. `v1.x.x-beta`)
+> - Real names, emails, internal project codenames
+>
+> Which of these should be blurred? Anything else specific to your demo (real customer data, internal task IDs, business strategy text)?
+
+Then edit `PERSISTENT_MASKS` in `record.js` (top CONFIG block):
+
+```js
+const PERSISTENT_MASKS = [
+  { selector: '.user-badge',  label: 'username' },         // resolved once at startup
+  { selector: 'header .logo', label: 'logo' },
+  { box: { x: 0, y: 820, w: 220, h: 80 }, label: 'sidebar-bottom' },  // fixed coordinates
+];
+```
+
+**Selector vs box**:
+- **Selector** is auto-resolved against the live DOM after first navigation. Element MUST be `position: fixed` or `sticky` — otherwise the captured boundingBox drifts when the page scrolls. If the resolver detects non-fixed positioning, it warns in the log; switch to `box` in that case.
+- **Box** is fixed `{x, y, w, h}` in viewport coordinates. Use this when selectors are unreliable, or to cover a known-stable region (e.g. footer area regardless of element).
+
+If the user says "no masks needed" (e.g. demo is on a generic public site with no PII), leave the array empty — the recording proceeds without any blur. Don't lecture.
+
+### 6. Author the stage flow
+
+Edit the body of the `try { ... }` block in `record.js` (search for `STAGE FLOW`). The page is already on `BASE` when your flow starts (record.js handles first navigation + mask resolution before the STAGE FLOW block) — your code does NOT need to call `page.goto(BASE)` again.
+
+Use the helpers documented in [references/helpers-api.md](references/helpers-api.md). For a fuller pattern guide see [examples/walkthrough-flow.md](examples/walkthrough-flow.md).
+
+### 7. Ship
 
 ```bash
 npm run ship
@@ -115,10 +148,27 @@ npm run ship
 This runs the full pipeline (record → postprocess → deploy → review → clean). On a 2-minute demo with ~20 clicks, expect:
 
 - record: ~2-3 minutes (real-time playthrough plus dwell times)
-- postprocess: ~30-60 seconds (ffmpeg compositing)
+- postprocess: ~30-60 seconds (ffmpeg compositing — slightly longer per persistent mask)
 - review: ~30-60 seconds (n × ffmpeg seek+frame extraction; **no progress indicator, just waits silently — that's normal**)
 
-After it completes, **read the review screenshots** to verify the demo actually looks correct — see [references/known-pitfalls.md](references/known-pitfalls.md) for what to watch for.
+### 8. Privacy + visual review (REQUIRED — do not skip)
+
+After `npm run ship` completes you MUST read the review screenshots before declaring the demo done. Subtitle counts and ship success do NOT prove the recording is shippable.
+
+**Read all 4 review passes**:
+
+1. `review/flow/click-XX-*.png` — sample clicks with high `y` or large delta from previous click; confirm cursor is on target
+2. `review/visual/sub-XX.png` — every subtitle: does the text match what UI shows?
+3. `review/coverage/stage-XX.png` — for any `tryStep` stage: did it actually execute?
+4. **`review/sensitive/` — read EVERY image** and answer:
+   - For each `mask-XX-*.png` (cropped to mask region): is the area unreadable / blurred to noise?
+   - For each `scan-XX-*.png` (full frame at 10s intervals): is there ANY PII visible? Look for usernames, real names, emails, UUIDs, version numbers, internal project codenames, business strategy text, real customer data.
+
+**If the sensitive pass surfaces unmasked PII**: STOP. Add a `box` mask to `PERSISTENT_MASKS` (you don't need a selector for retroactive masks — just measure coordinates from the offending scan-XX.png). Then run **only** `npm run render && npm run review:sensitive` (no need to re-record — the original `events.json` is reused). Iterate until `review/sensitive/` is clean.
+
+**If the user explicitly said "no masks needed" upfront** but you still find PII in `scan-XX.png`: do NOT silently ship. Flag it back to the user and ask how to proceed.
+
+See [references/known-pitfalls.md](references/known-pitfalls.md) for other things to watch for.
 
 ## Authoring helpers (quick reference)
 
@@ -162,7 +212,8 @@ See [references/known-pitfalls.md](references/known-pitfalls.md). The big ones:
 - **Cursor disappears off-frame** if a click target is below the viewport — the `click` helper auto-scrolls into view, but if you bypass it (e.g. raw `locator.click()`), the synthetic cursor will fly to coordinates outside the recorded frame.
 - **Wheel scrolls the wrong container** if you don't park the mouse first — the `scroll` helper does this, but raw `page.mouse.wheel(0, dy)` from cold-start will scroll whatever element is at (0, 0) (usually the sidebar).
 - **`text=...` is substring match** — use `getByText(s, { exact: true })` for precision.
-- **Subtitle count ≠ done.** `report.txt` shows the events fired, not that the demo *looks correct*. The 3-pass review screenshots exist precisely so you (or the user) can verify visually after every ship.
+- **Subtitle count ≠ done.** `report.txt` shows the events fired, not that the demo *looks correct* and not that PII is hidden. The 4-pass review screenshots (flow / visual / coverage / sensitive) exist precisely so you (or the user) can verify visually after every ship.
+- **Mask drift on scrolling elements** — `selector`-based masks capture boundingBox once. If the element is not `position: fixed` / `sticky`, the mask stays put while the element moves. Use a `box` covering the worst-case viewport position instead.
 
 ## Reference docs
 

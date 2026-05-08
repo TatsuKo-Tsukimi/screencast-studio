@@ -2,12 +2,12 @@
 
 Subtitled, cursor-overlay demo videos from a Playwright walkthrough.
 
-The cursor isn't real. Playwright headless has no mouse, so `record.js` just drives the page and logs every click and subtitle as it goes. `postprocess.js` reads that log and ffmpeg-overlays a cursor that glides to each target, drops a Material ripple on click, and burns in subtitles.
+The cursor isn't real. Playwright headless has no mouse, so `record.js` just drives the page and logs every click and subtitle as it goes. `postprocess.js` reads that log and ffmpeg-overlays a cursor that glides to each target, drops a Material ripple on click, and burns in subtitles. Sensitive UI regions can be declared in CONFIG and they're blurred automatically as the top composition layer.
 
 Output:
 
-- `final.mp4` — h264, cursor overlay + click ripples + burned-in subtitles
-- `review/{flow,visual,coverage}/*.png` — 3-pass screenshot set for QA
+- `final.mp4` — h264, cursor overlay + click ripples + burned-in subtitles + persistent-mask blur
+- `review/{flow,visual,coverage,sensitive}/*.png` — 4-pass screenshot set for visual + privacy QA
 
 ## Quick start
 
@@ -22,7 +22,7 @@ npm install
 npx playwright install chromium
 npm run setup
 npm run login   # only if your target needs auth
-# edit the flow in record.js
+# declare PERSISTENT_MASKS + edit the flow in record.js
 npm run ship
 ```
 
@@ -30,18 +30,32 @@ npm run ship
 
 ## Authoring
 
-The flow lives inside `record.js`:
+Stage flow lives inside `record.js`:
 
 ```js
-await sub('从智能体广场进入项目模块');
+await sub('Open the project list');
 const navProj = page.locator('a[href="/projects"]').first();
-await click(navProj, '点击侧边栏「项目」');
-await sub('多个并行项目');
+await click(navProj, 'Click "Projects" in sidebar');
+await sub('Multiple projects in flight');
 await scroll(400, 2);
-await sub('滚动看更多');
+await sub('Scroll to see more');
 ```
 
-Five helpers — `sub` / `click` / `scroll` / `hold` / `tryStep` — cover ~95% of cases. Anonymized full example: [`examples/walkthrough-flow.md`](examples/walkthrough-flow.md).
+Five helpers — `sub` / `click` / `scroll` / `hold` / `tryStep` — cover ~95% of cases. Full pattern guide: [`examples/walkthrough-flow.md`](examples/walkthrough-flow.md).
+
+## Persistent masks (privacy)
+
+Declare sensitive UI regions in `record.js` CONFIG; they get blurred for the entire video as the top composition layer:
+
+```js
+const PERSISTENT_MASKS = [
+  { selector: '.user-badge',  label: 'username' },
+  { selector: 'header .logo', label: 'logo' },
+  { box: { x: 0, y: 820, w: 220, h: 80 }, label: 'sidebar-bottom' },
+];
+```
+
+`selector` masks resolve once after first navigation (best for `position: fixed`/`sticky` elements); `box` masks are fixed coordinates (use these for retroactive coverage — edit + `npm run render` without re-recording). Default blur is `boxblur=20:2`; tune in `postprocess.js` if text is still legible. After every ship, **read `review/sensitive/`** — it crops each mask region for blur verification and samples full frames every 10s for unmasked-PII detection.
 
 ## Prerequisites
 
@@ -49,4 +63,4 @@ Node 18+. Playwright and ffmpeg-static install via npm; `npx playwright install 
 
 ## Gotchas
 
-Subtitle count ≠ correctness. Subtitles fire on a timer; they keep going even if a click missed and the page never advanced. Always read the review screenshots after `ship`. More in [`references/known-pitfalls.md`](references/known-pitfalls.md).
+Subtitle count ≠ correctness, and ship success ≠ privacy. Subtitles fire on a timer; they keep going even if a click missed and the page never advanced. Masks are also blind to UI states they didn't cover. Always read all 4 review passes after `ship` — `flow` / `visual` / `coverage` / `sensitive`. More in [`references/known-pitfalls.md`](references/known-pitfalls.md).

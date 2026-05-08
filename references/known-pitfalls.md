@@ -125,8 +125,53 @@ cat events.json | jq '.[] | select(.x == null or .y == null)'  # find malformed 
 1. **Read every `review/visual/sub-XX.png`** — does subtitle match UI?
 2. **Sample `review/flow/click-XX-A-pre.png`** for clicks with high `y` or large delta from prev click — is cursor on target?
 3. **Sample `review/coverage/stage-XX.png`** for any `tryStep` stage — did it actually execute?
+4. **Read every `review/sensitive/mask-XX-*.png` and `scan-XX-*.png`** — masks blurred enough? Any PII visible in the unmasked frame scans?
 
-If you find issues, fix `record.js`, re-ship, re-read. The cycle ends only when all 3 passes look right.
+If you find issues, fix `record.js` (or just add box masks for the sensitive pass), re-ship (or `npm run render && npm run review:sensitive` for mask-only iterations), re-read. The cycle ends only when all 4 passes (flow / visual / coverage / sensitive) look right.
+
+## Mask region drifts off the masked element
+
+**Symptom**: in `review/sensitive/scan-XX.png`, you see the blurred rectangle is no longer covering its intended target — the element has moved (e.g. user scrolled and the masked element scrolled with the page) and the mask sits over empty space, exposing what it was supposed to hide.
+
+**Cause**: `selector`-based persistent masks capture `boundingBox()` once at the start of recording. If the element is `position: static` / `relative` / `absolute` (i.e. part of normal flow), it moves when the page scrolls, but the captured (x, y, w, h) is locked.
+
+**Fix**:
+- **Prefer fixed-positioned elements** for selector masks. The resolver in `record.js` warns when an element's computed `position` is not `fixed` or `sticky` — heed that warning.
+- **Switch to a `box` mask** that covers the worst-case viewport position. Often simpler than fighting CSS:
+  ```js
+  // before: { selector: '.user-info', label: 'username' }
+  // after:  { box: { x: 0, y: 800, w: 240, h: 100 }, label: 'sidebar-bottom' }
+  ```
+- **No selector tricks fix this** — even with re-querying, recording is sequential and the mask is one-shot at startup. Dynamic-following masks are not in v0.2.
+
+## Mask blur is too weak — text still readable
+
+**Symptom**: in `review/sensitive/mask-XX-*.png`, you can squint and read the text inside the blurred region (especially for large/bold/high-contrast text).
+
+**Cause**: the default `boxblur=20:2` is tuned for typical SPA chrome (badges, footers, small text). High-contrast / large-font content benefits from more aggressive blur.
+
+**Fix**: edit `postprocess.js`, find `boxblur=20:2` in the persistent-mask block, and try one of:
+- `boxblur=40:2` — wider blur kernel (more smearing horizontally + vertically)
+- `boxblur=20:4` — more iterations (smoother gaussian-like falloff)
+- `boxblur=40:3` — both, for stubbornly readable text
+- Replace with `pixelize=20:20` for unmistakable mosaic blocks (block size 20×20)
+
+Re-render with `npm run render`, re-check `review/sensitive/`. No re-record needed.
+
+## Sensitive scan shows PII not covered by any mask
+
+**Symptom**: `review/sensitive/scan-XX-tNNs.png` reveals a username, version number, internal codename, or business strategy text that's visible in the recording but not inside any current `PERSISTENT_MASKS` region.
+
+**Cause**: missed during the upfront mask configuration round. Often it's content that only appears mid-flow (e.g. a project name shown after navigating into a detail view).
+
+**Fix**: NO need to re-record. Add a `box` mask:
+1. Open the offending `scan-XX-tNNs.png` and measure the rectangle in pixel coordinates (most image viewers show cursor coords; or open in any editor that displays them)
+2. Add to `PERSISTENT_MASKS`:
+   ```js
+   { box: { x: 320, y: 180, w: 600, h: 90 }, label: 'project-title-bar' }
+   ```
+3. Run `npm run render && npm run review:sensitive`
+4. Repeat until `review/sensitive/` is clean
 
 ## "Why does my video look 1080p but the recording was 1440x900?"
 

@@ -28,6 +28,18 @@ const VIEWPORT = {
 };
 const STORAGE_STATE = path.join(__dirname, 'storageState.json');
 
+// Persistent mask regions — blurred for the entire video.
+// Use `selector` for elements you can target (resolved once after first navigation),
+// or `box` for fixed coordinates (e.g. footer version, sidebar corners).
+// IMPORTANT: selector-based masks assume the element is `position: fixed` or `sticky`.
+// If the element scrolls with the page, the mask stays put and may drift off the target —
+// use a `box` covering the worst-case viewport position instead.
+const PERSISTENT_MASKS = [
+  // { selector: '.user-badge',  label: 'username' },
+  // { selector: 'header .logo', label: 'logo' },
+  // { box: { x: 0, y: 820, w: 220, h: 80 }, label: 'sidebar-bottom' },
+];
+
 (async () => {
   const browser = await chromium.launch({ headless: true });
   const videoDir = path.join(__dirname, 'videos');
@@ -108,14 +120,53 @@ const STORAGE_STATE = path.join(__dirname, 'storageState.json');
     catch (e) { log(`✗ ${name} — skipped: ${e.message.slice(0, 120)}`); }
   };
 
+  // Resolve PERSISTENT_MASKS into mask_persistent events. Called automatically right after
+  // first navigation (below). Selector-based masks query boundingBox() once; box-based masks
+  // are written through as-is. Each mask becomes one event consumed by postprocess.js.
+  const resolveMasks = async () => {
+    for (const m of PERSISTENT_MASKS) {
+      let box = m.box;
+      if (m.selector) {
+        const loc = page.locator(m.selector).first();
+        try {
+          await loc.waitFor({ state: 'visible', timeout: 5000 });
+          const bb = await loc.boundingBox();
+          if (!bb) { log(`MASK ⚠ "${m.label}" — selector matched but no bbox; skipping`); continue; }
+          const pos = await loc.evaluate((el) => getComputedStyle(el).position).catch(() => 'unknown');
+          if (pos !== 'fixed' && pos !== 'sticky') {
+            log(`MASK ⚠ "${m.label}" — position=${pos}; may drift on scroll. Use { box } to lock coordinates.`);
+          }
+          box = { x: Math.round(bb.x), y: Math.round(bb.y), w: Math.round(bb.width), h: Math.round(bb.height) };
+        } catch (e) {
+          log(`MASK ✗ "${m.label}" — selector "${m.selector}" not resolvable: ${e.message.slice(0, 80)}`);
+          continue;
+        }
+      }
+      if (!box || box.w <= 0 || box.h <= 0) {
+        log(`MASK ✗ "${m.label}" — invalid box`);
+        continue;
+      }
+      events.push({ t: 0, kind: 'mask_persistent', label: m.label, x: box.x, y: box.y, w: box.w, h: box.h });
+      log(`MASK ✓ "${m.label}" ${box.x},${box.y} ${box.w}x${box.h}`);
+    }
+  };
+
   try {
+    // First navigation + mask resolution. record.js handles this for you so PERSISTENT_MASKS
+    // can resolve their selectors against a logged-in DOM. After this block, the page is on
+    // BASE and ready — your STAGE FLOW does NOT need to call page.goto(BASE) again.
+    await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded' });
+    await page.locator('body').waitFor({ state: 'visible', timeout: 10000 });
+    await page.waitForTimeout(800); // let SPA settle before resolving mask selectors
+    await resolveMasks();
+
     // ============================================================
     // ===== STAGE FLOW — replace this block with your demo =======
     // ============================================================
+    // Page is already on BASE (record.js did the first navigation above) — start clicking.
     //
     // Example skeleton (delete and replace):
     //
-    //   await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded' });
     //   await page.locator('h1').first().waitFor({ timeout: 8000 });
     //   await sub('Welcome — what this demo shows');
     //

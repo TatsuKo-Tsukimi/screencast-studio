@@ -193,7 +193,27 @@ function main() {
   };
   const subStyle =
     `FontName=${pickFont()},Fontsize=16,PrimaryColour=&Hffffff&,OutlineColour=&H00000000&,BackColour=&H99000000&,BorderStyle=4,Outline=1.5,Shadow=0,MarginV=42,Alignment=2`;
-  chains.push(`${inLabel}subtitles=subs.srt:force_style='${subStyle}'[out]`);
+  chains.push(`${inLabel}subtitles=subs.srt:force_style='${subStyle}'[subbed]`);
+  inLabel = '[subbed]';
+
+  // Persistent masks — applied LAST so they cover cursor, ripples, AND subtitles.
+  // Each mask: split → crop+boxblur the region → overlay back at original coords.
+  const persistentMasks = events.filter((e) => e.kind === 'mask_persistent');
+  persistentMasks.forEach((m, i) => {
+    const mainTag = `[m${i}main]`;
+    const cropTag = `[m${i}crop]`;
+    const blurTag = `[m${i}blur]`;
+    const ovTag = `[m${i}out]`;
+    chains.push(`${inLabel}split=2${mainTag}${cropTag}`);
+    chains.push(`${cropTag}crop=${m.w}:${m.h}:${m.x}:${m.y},boxblur=20:2${blurTag}`);
+    chains.push(`${mainTag}${blurTag}overlay=x=${m.x}:y=${m.y}${ovTag}`);
+    inLabel = ovTag;
+  });
+
+  // Ensure ffmpeg's -map [out] target exists regardless of mask count.
+  if (inLabel !== '[out]') {
+    chains.push(`${inLabel}null[out]`);
+  }
 
   const filterComplex = chains.join(';');
 
